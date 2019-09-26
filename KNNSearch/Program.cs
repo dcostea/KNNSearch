@@ -1,21 +1,40 @@
 ﻿using System;
+using static System.Console;
+using static KNNSearch.ConsoleHelper;
 
 namespace KNNSearch
 {
     class Program
     {
-        const int DIMENSION = 128;
-        const int RANGE = 10_000_000;
-        
         static void Main()
         {
-            Console.WriteLine("Generating points...");
-            var points = KNN.GeneratePoints(DIMENSION, RANGE);
-            var query = KNN.GeneratePoint(DIMENSION);
+            KNN.GenerateRandomPoints();
 
-            foreach (var item in KNN.GetNeighbors(points, query, DIMENSION, RANGE))
+            KNN.BuildIndex();
+
+            var query = KNN.NewRandomPoint();
+
+            foreach (var item in KNN.GetNeighbors(query))
             {
-                //Console.WriteLine($"{item.Distance}");
+                WriteLineColored($"{item.Node.Value.Url} {item.Node.Value.Guid} {item.Distance}", ConsoleColor.White);
+            }
+
+            var newPoint1 = KNN.NewRandomPoint();
+            var val1 = KNN.AddPointToIndex(newPoint1);
+
+            var newPoint2 = KNN.NewRandomPoint();
+            var val2 = KNN.AddPointToIndex(newPoint2);
+
+            foreach (var item in KNN.GetNeighbors(query))
+            {
+                if (val1 == item.Node.Value || val2 == item.Node.Value)
+                {
+                    WriteLineColored($"{item.Node.Value.Url} {item.Node.Value.Guid} {item.Distance}", ConsoleColor.Yellow);
+                }
+                else
+                {
+                    WriteLineColored($"{item.Node.Value.Url} {item.Node.Value.Guid} {item.Distance}", ConsoleColor.White);
+                }
             }
         }
     }

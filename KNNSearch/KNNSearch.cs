@@ -1,5 +1,6 @@
 ﻿using Accord.Collections;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using static KNNSearch.ConsoleHelper;
@@ -8,86 +9,79 @@ namespace KNNSearch
 {
     class KNN
     {
-        public static double[] GeneratePoint(int dimension)
-        {
-            return GeneratePoints(dimension, 1).First();
-        }
+        const int DIMENSION = 128;
+        const int RANGE = 1_000_000;
 
-        public static KDTree<double> AddPoint(KDTree<double> tree, double[] point)
-        {
-            tree.Add(point, 10);
-            return tree;
-        }
+        private static Stopwatch sw = new Stopwatch();
 
-        public static double[][] GeneratePoints(int dimension, int range)
+        public static double[][] Points { get; set; } = new double[RANGE][];
+        public static KDTree<Face> Tree { get; set; }
+        public static List<Face> Faces { get; set; }
+
+        public static double[] NewRandomPoint()
         {
-            double[][] points = new double[range][];
             var random = new Random();
-            for (int i = 0; i < range; i++)
+            var point = new double[DIMENSION];
+            for (int j = 0; j < DIMENSION; j++)
             {
-                var row = new double[dimension];
-                for (int j = 0; j < dimension; j++)
+                point[j] = random.NextDouble();
+            }
+
+            return point;
+        }
+
+        public static Face AddPointToIndex(double[] point)
+        {
+            WriteLineColored($"Adding new point to the index...", ConsoleColor.White);
+
+            sw.Start();
+            var face = new Face { Guid = Guid.NewGuid(), Url = $"img{Faces.Count}.png" };
+            Tree.Add(point, face);
+            Faces.Add(face);
+            sw.Stop();
+            WriteLineColored($"Point {face.Url} {face.Guid} added to the index: {sw.ElapsedMilliseconds} ms", ConsoleColor.Yellow);
+
+            return face;
+        }
+
+        public static void GenerateRandomPoints()
+        {
+            WriteLineColored($"Generating {RANGE} points with {DIMENSION} dimensions...", ConsoleColor.White);
+
+            var random = new Random();
+            for (int i = 0; i < RANGE; i++)
+            {
+                var row = new double[DIMENSION];
+                for (int j = 0; j < DIMENSION; j++)
                 {
                     row[j] = random.NextDouble();
                 }
-                points[i] = row;
+                Points[i] = row;
             }
-
-            return points;
         }
 
-        public static IOrderedEnumerable<NodeDistance<KDTreeNode<double>>> GetNeighbors(double[][] points, double[] query, int dimension, int range)
+        public static void BuildIndex()
         {
-            var sw = new Stopwatch();
-
-            var values = new double[range];
-            for (int i = 0; i < range; i++)
+            Faces = new List<Face>(RANGE);
+            for (int i = 0; i < RANGE; i++)
             {
-                values[i] = i;
+                Faces.Add(new Face { Guid = Guid.NewGuid(), Url = $"img{i}.png" });
             }
 
             sw.Start();
-            var tree = KDTree.FromData<double>(points, values, false);
+            Tree = KDTree.FromData(Points, Faces.ToArray(), false);
             sw.Stop();
-            WriteLineColored($"Time to build the index: {sw.ElapsedMilliseconds} ms, {sw.ElapsedTicks} ticks", ConsoleColor.Green);
+            WriteLineColored($"Time to build the index: {sw.ElapsedMilliseconds} ms", ConsoleColor.Yellow);
+        }
 
-            //var tree = KDTree.FromData<double>(points, new Accord.Math.Distances.Manhattan(), true);
-            //var tree = KDTree.FromData<double>(points, new Accord.Math.Distances.Euclidean(), true);
-
+        public static IOrderedEnumerable<NodeDistance<KDTreeNode<Face>>> GetNeighbors(double[] query)
+        {
             sw.Restart();
-            var n1 = tree.Nearest(query, neighbors: 10);
+            var neighbours = Tree.Nearest(query, neighbors: 10);
             sw.Stop();
-            WriteLineColored($"Time to find the neighbours: {sw.ElapsedMilliseconds} ms, {sw.ElapsedTicks} ticks", ConsoleColor.Green);
+            WriteLineColored($"Time to find the first 10 neighbours: {sw.ElapsedMilliseconds} ms", ConsoleColor.Yellow);
 
-            Console.WriteLine("---------------------------");
-            foreach (var nn1 in n1.OrderBy(n => n.Distance))
-            {
-                Console.WriteLine($"{nn1.Distance,4} {nn1.Node.Value}");
-            }
-
-            var newPoint = GeneratePoint(dimension);
-
-            sw.Restart();
-            AddPoint(tree, newPoint);
-            sw.Stop();
-            WriteLineColored($"Time to add a point to the index: {sw.ElapsedMilliseconds} ms, {sw.ElapsedTicks} ticks", ConsoleColor.Green);
-
-            ////var ts = tree.Traverse(TreeTraversal.BreadthFirst<KDTreeNode<double>>);
-
-            sw.Restart();
-            var n2 = tree.Nearest(query, neighbors: 11);
-            sw.Stop();
-            WriteLineColored($"Time to find the neighbours: {sw.ElapsedMilliseconds} ms, {sw.ElapsedTicks} ticks", ConsoleColor.Green);
-
-            Console.WriteLine("---------------------------");
-            foreach (var nn2 in n2.OrderBy(n => n.Distance))
-            {
-                Console.WriteLine($"{nn2.Distance, 4} {nn2.Node.Value}");
-            }
-
-            Console.WriteLine("===============================");
-
-            return n2.OrderBy(n => n.Distance);
+            return neighbours.OrderBy(n => n.Distance);
         }
     }
 }

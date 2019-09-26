@@ -1,9 +1,10 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+﻿using System;
 
 namespace KNNSearch
 {
     public class Face
     {
-        public Vector<double> Metrics { get; set; }
+        public string Url { get; set; }
+        public Guid Guid { get; set; }
     }
 }
