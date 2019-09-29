@@ -1,5 +1,4 @@
 ﻿using System;
-using static System.Console;
 using static KNNSearch.ConsoleHelper;
 
 namespace KNNSearch
@@ -8,33 +7,33 @@ namespace KNNSearch
     {
         static void Main()
         {
-            KNN.GenerateRandomPoints();
+            KNN knn = new KNN(1000000, 128, 10);
 
-            KNN.BuildIndex();
+            var query = knn.NewRandomPoint();
 
-            var query = KNN.NewRandomPoint();
-
-            foreach (var item in KNN.GetNeighbors(query))
+            foreach (var item in knn.GetNeighbors(query, DistanceFormula.Chebyshev))
             {
-                WriteLineColored($"{item.Node.Value.Url} {item.Node.Value.Guid} {item.Distance}", ConsoleColor.White);
+                WriteLineColored($"{item.Node.Value.Url} [{item.Distance:0.###}]", ConsoleColor.Gray);
             }
 
-            var newPoint1 = KNN.NewRandomPoint();
-            var val1 = KNN.AddPointToIndex(newPoint1);
+            //////WriteLineColored($"\nGet all {knn.Tree.Count} nodes:", ConsoleColor.Cyan);
+            //////foreach (var item in knn.Tree)
+            //////{
+            //////    WriteLineColored($"{item.Value.Url}", ConsoleColor.Cyan);
+            //////}
 
-            var newPoint2 = KNN.NewRandomPoint();
-            var val2 = KNN.AddPointToIndex(newPoint2);
+            var newPoints = knn.NewRandomPoints(1000000);
+            knn.AddPointsToIndex(newPoints);
 
-            foreach (var item in KNN.GetNeighbors(query))
+            //////WriteLineColored($"\nGet all {knn.Tree.Count} nodes:", ConsoleColor.Cyan);
+            //////foreach (var item in knn.Tree)
+            //////{
+            //////    WriteLineColored($"{item.Value.Url}", ConsoleColor.Cyan);
+            //////}
+
+            foreach (var item in knn.GetNeighbors(query, DistanceFormula.Chebyshev))
             {
-                if (val1 == item.Node.Value || val2 == item.Node.Value)
-                {
-                    WriteLineColored($"{item.Node.Value.Url} {item.Node.Value.Guid} {item.Distance}", ConsoleColor.Yellow);
-                }
-                else
-                {
-                    WriteLineColored($"{item.Node.Value.Url} {item.Node.Value.Guid} {item.Distance}", ConsoleColor.White);
-                }
+                WriteLineColored($"{item.Node.Value.Url} [{item.Distance:0.###}]", ConsoleColor.Gray);
             }
         }
     }
