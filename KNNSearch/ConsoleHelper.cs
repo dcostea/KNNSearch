@@ -3,7 +3,7 @@ using static System.Console;
 
 namespace KNNSearch
 {
-    public class ConsoleHelper
+    public static class ConsoleHelper
     {
         public static void WriteLineColored(string message, ConsoleColor color)
         {

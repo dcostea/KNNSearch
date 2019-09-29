@@ -32,6 +32,17 @@ namespace KNNSearch
             BuildIndex();
         }
 
+        public double[] ZeroPoint()
+        {
+            var point = new double[_dimension];
+            for (int j = 0; j < _dimension; j++)
+            {
+                point[j] = 0;
+            }
+
+            return point;
+        }
+
         public double[] NewRandomPoint()
         {
             var point = new double[_dimension];
@@ -52,7 +63,7 @@ namespace KNNSearch
                 points[i] = NewRandomPoint();
             }
             sw.Stop();
-            WriteLineColored($"\nNew {range} random points generated [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
+            WriteLineColored($"\n{range} random points generated [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
 
             return points;
         }
@@ -82,7 +93,7 @@ namespace KNNSearch
                 Faces.Add(new Face { Guid = Guid.NewGuid(), Url = $"img{Faces.Count}.png" });
             }
             sw.Stop();
-            WriteLineColored($"{points.Length} faces generated! [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
+            WriteLineColored($"{points.Length} faces generated [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
 
             sw.Restart();
             for (int i = 0; i < points.Length; i++)
@@ -97,18 +108,24 @@ namespace KNNSearch
         {
             /* https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.DistanceMetric.html */
 
-            Tree.Distance = distanceFormula switch
-            {
-                DistanceFormula.Manhattan => new Accord.Math.Distances.Manhattan(),
-                DistanceFormula.Euclidean => new Accord.Math.Distances.Euclidean(),
-                DistanceFormula.Chebyshev => new Accord.Math.Distances.Chebyshev(),
-                _ => new Accord.Math.Distances.Manhattan(),
-            };
-
             sw.Restart();
+            switch (distanceFormula)
+            {
+                case DistanceFormula.Manhattan:
+                    Tree.Distance = new Accord.Math.Distances.Manhattan();
+                    break;
+
+                case DistanceFormula.Euclidean:
+                    Tree.Distance = new Accord.Math.Distances.Euclidean();
+                    break;
+
+                case DistanceFormula.Chebyshev:
+                    Tree.Distance = new Accord.Math.Distances.Chebyshev();
+                    break;
+            }
             var neighbours = Tree.Nearest(query, neighbors: _neighbors);
             sw.Stop();
-            WriteLineColored($"\nThe first {_neighbors} neighbours for {Tree.Count} nodes [{sw.ElapsedMilliseconds} ms]:", ConsoleColor.Yellow);
+            WriteLineColored($"\nThe first {_neighbors} neighbours for {Tree.Count} nodes [{sw.ElapsedMilliseconds} ms]:", ConsoleColor.Cyan);
 
             return neighbours.OrderBy(n => n.Distance);
         }
