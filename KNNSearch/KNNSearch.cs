@@ -2,13 +2,17 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using static KNNSearch.ConsoleHelper;
 
 namespace KNNSearch
 {
     class KNN
     {
+        const string FilePath = "faces.csv";
+
         private readonly Stopwatch sw = new Stopwatch();
 
         private int _dimension { get; set; }
@@ -16,7 +20,6 @@ namespace KNNSearch
         private int _neighbors { get; set; }
         private Random _random { get; set; }
 
-        public double[][] Points { get; set; }
         public KDTree<Face> Tree { get; set; }
         public List<Face> Faces { get; set; }
 
@@ -25,10 +28,13 @@ namespace KNNSearch
             _range = range;
             _dimension = dimension;
             _neighbors = neighbors;
-            Points = new double[_range][];
             _random = new Random();
 
-            Points = NewRandomPoints(_range);
+            // uncomment next lines to generate new csv file, and comment the ReadCsv line
+            GenerateFaces();
+            //WriteCsv().Wait();
+            //ReadCsv().Wait();
+
             BuildIndex();
         }
 
@@ -54,54 +60,43 @@ namespace KNNSearch
             return point;
         }
 
-        public double[][] NewRandomPoints(int range)
-        {
-            sw.Restart();
-            var points = new double[range][];
-            for (int i = 0; i < range; i++)
-            {
-                points[i] = NewRandomPoint();
-            }
-            sw.Stop();
-            WriteLineColored($"\n{range} random points generated [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
-
-            return points;
-        }
-
-        private void BuildIndex()
+        public void GenerateFaces()
         {
             sw.Restart();
             Faces = new List<Face>(_range);
             for (int i = 0; i < _range; i++)
             {
-                Faces.Add(new Face { Guid = Guid.NewGuid(), Url = $"img{i}.png" });
+                Faces.Add(new Face { Guid = Guid.NewGuid(), Url = $"img{i}.png", Metrics = NewRandomPoint() });
             }
             sw.Stop();
             WriteLineColored($"{_range} faces generated [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
-
-            sw.Restart();
-            Tree = KDTree.FromData(Points, Faces.ToArray(), false);
-            sw.Stop();
-            WriteLineColored($"Index built [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
         }
 
-        public void AddPointsToIndex(double[][] points)
+        private void BuildIndex()
         {
             sw.Restart();
-            for (int i = 0; i < points.Length; i++)
+            Tree = KDTree.FromData(Faces.Select(f => f.Metrics).ToArray(), Faces.ToArray(), false);
+            sw.Stop();
+            WriteLineColored($"INDEX built for {Faces.Count} faces [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
+        }
+
+        public void AddPointsToIndex(int range)
+        {
+            sw.Restart();
+            for (int i = 0; i < range; i++)
             {
-                Faces.Add(new Face { Guid = Guid.NewGuid(), Url = $"img{Faces.Count}.png" });
+                Faces.Add(new Face { Guid = Guid.NewGuid(), Url = $"img{_range + i}.png", Metrics = NewRandomPoint() });
             }
             sw.Stop();
-            WriteLineColored($"{points.Length} faces generated [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
+            WriteLineColored($"\n{range} more faces generated [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
 
             sw.Restart();
-            for (int i = 0; i < points.Length; i++)
+            for (int i = 0; i < range; i++)
             {
-                Tree.Add(points[i], Faces[_range + i]);
+                Tree.Add(Faces[_range + i].Metrics, Faces[_range + i]);
             }
             sw.Stop();
-            WriteLineColored($"Index added with {points.Length} points [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
+            WriteLineColored($"INDEX rebuilt (added with {range} more faces) [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
         }
 
         public IOrderedEnumerable<NodeDistance<KDTreeNode<Face>>> GetNeighbors(double[] query, DistanceFormula distanceFormula)
@@ -128,6 +123,34 @@ namespace KNNSearch
             WriteLineColored($"\nThe first {_neighbors} neighbours for {Tree.Count} nodes [{sw.ElapsedMilliseconds} ms]:", ConsoleColor.Cyan);
 
             return neighbours.OrderBy(n => n.Distance);
+        }
+
+        public async Task ReadCsv()
+        {
+            sw.Restart();
+            var lines = await File.ReadAllLinesAsync(FilePath);
+            Faces = new List<Face>();
+            foreach (var line in lines)
+            {
+                var fields = line.Split(',');
+                Faces.Add(
+                    new Face
+                    {
+                        Url = fields[0],
+                        Guid = new Guid(fields[1]),
+                        Metrics = fields[2].Split(';').Select(f => double.Parse(f)).ToArray()
+                    });
+            }
+            sw.Stop();
+            WriteLineColored($"CSV file read [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
+        }
+
+        public async Task WriteCsv()
+        {
+            sw.Restart();
+            await File.WriteAllLinesAsync(FilePath, Faces.Select(f => $"{f.Url},{f.Guid},{string.Join(';', f.Metrics)}"));
+            sw.Stop();
+            WriteLineColored($"CSV file write [{sw.ElapsedMilliseconds} ms]", ConsoleColor.Yellow);
         }
     }
 }

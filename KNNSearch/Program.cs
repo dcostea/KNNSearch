@@ -7,11 +7,11 @@ namespace KNNSearch
     {
         static void Main()
         {
-            KNN knn = new KNN(1000000, 128, 10);
+            KNN knn = new KNN(65535, 128, 10);
 
             var query = knn.NewRandomPoint();
 
-            foreach (var item in knn.GetNeighbors(query, DistanceFormula.Chebyshev))
+            foreach (var item in knn.GetNeighbors(query, DistanceFormula.Euclidean))
             {
                 WriteLineColored($"{item.Node.Value.Url} [{item.Distance:0.###}]", ConsoleColor.Gray);
             }
@@ -22,8 +22,7 @@ namespace KNNSearch
             //////    WriteLineColored($"{item.Value.Url}", ConsoleColor.Cyan);
             //////}
 
-            var newPoints = knn.NewRandomPoints(1000000);
-            knn.AddPointsToIndex(newPoints);
+            knn.AddPointsToIndex(1);
 
             //////WriteLineColored($"\nGet all {knn.Tree.Count} nodes:", ConsoleColor.Cyan);
             //////foreach (var item in knn.Tree)
@@ -31,10 +30,12 @@ namespace KNNSearch
             //////    WriteLineColored($"{item.Value.Url}", ConsoleColor.Cyan);
             //////}
 
-            foreach (var item in knn.GetNeighbors(query, DistanceFormula.Chebyshev))
+            foreach (var item in knn.GetNeighbors(query, DistanceFormula.Euclidean))
             {
                 WriteLineColored($"{item.Node.Value.Url} [{item.Distance:0.###}]", ConsoleColor.Gray);
             }
+
+            //task.Wait();
         }
     }
 }
